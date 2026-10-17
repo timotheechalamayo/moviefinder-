@@ -31,15 +31,15 @@
 
   // ---------- Plakate ----------
   const IMG = "https://upload.wikimedia.org/wikipedia/";
-  let wikiCache = ls.get("ff.wikiimg", {});
-  const imgSrc = (m) => (m.b ? IMG + m.b : wikiCache[m.i] || "");
+  let wikiCache = ls.get("ff.wikiimg2", {});
+  const imgSrc = (m) => (m.b ? (m.b.startsWith("http") ? m.b : IMG + m.b) : wikiCache[m.i] || "");
   // Für Filme ohne Plakat in der Liste: einmal bei Wikipedia nachschlagen
   async function lookupPoster(m) {
     if (m.b || m.i in wikiCache) return;
     wikiCache[m.i] = "";
     try {
       const titles = [`${m.t} (${m.y} film)`, `${m.t} (film)`].join("|");
-      const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=500&titles=" + encodeURIComponent(titles);
+      const url = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&prop=pageimages&piprop=thumbnail&pithumbsize=500&pilicense=any&titles=" + encodeURIComponent(titles);
       const pages = Object.values((await (await fetch(url)).json()).query?.pages || {});
       const hit = pages.find((p) => p.thumbnail);
       if (hit) {
@@ -47,7 +47,7 @@
         document.querySelectorAll(`[data-id="${m.i}"] img`).forEach((img) => { img.src = hit.thumbnail.source; img.hidden = false; });
       }
     } catch {}
-    ls.set("ff.wikiimg", wikiCache);
+    ls.set("ff.wikiimg2", wikiCache);
   }
   const imgTag = (m, cls) => `<img class="${cls}" src="${esc(imgSrc(m))}" alt="" draggable="false" ${imgSrc(m) ? "" : "hidden"} onerror="this.hidden=true">`;
   const poster = (m) => { const h = hash(m.i) % 360; return `linear-gradient(160deg, hsl(${h} 45% 34%), hsl(${(h + 40) % 360} 55% 16%) 70%)`; };
