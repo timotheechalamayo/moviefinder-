@@ -1,6 +1,6 @@
 (() => {
   const PEOPLE = ["Tim", "Pauli"];
-  const PER_SESSION = 15;
+  const PER_SESSION = 30;
   const $ = (id) => document.getElementById(id);
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -216,7 +216,7 @@
       $("res-title").textContent = "Session offen";
       $("res-text").textContent = `Du hast noch ${left} von ${s.films.length} Filmen vor dir.`;
     } else if (!s.partner) {
-      $("res-title").textContent = "Deine 15 sind durch";
+      $("res-title").textContent = `Deine ${s.films.length} sind durch`;
       $("res-text").textContent = `Schick ${o} die Session. Sobald ${o} geswipt und dir den Link zurückgeschickt hat, siehst du hier eure Matches.`;
     } else if (!partnerDone(s)) {
       $("res-title").textContent = mt.length ? `${mt.length} ${mt.length === 1 ? "Match" : "Matches"} bisher` : "Fast geschafft";
