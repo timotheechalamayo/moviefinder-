@@ -13,7 +13,8 @@
   const GENRES = [...new Set(movies.flatMap((m) => m.g))].sort((a, b) => a.localeCompare(b, "de"));
 
   let me = ls.get("ff.me", null);
-  let prefs = Object.assign({ minRating: 7, genres: [] }, ls.get("ff.prefs", {}));
+  const YMIN = 1920, YMAX = Math.max(...movies.map((m) => m.y));
+  let prefs = Object.assign({ minRating: 7, genres: [], y1: YMIN, y2: YMAX }, ls.get("ff.prefs", {}));
   // sessions[id] = { id, created, min, genres, films: [tt], mine: {tt: 1|0}, partner: {tt: 1|0} | null }
   let sessions = ls.get("ff.sessions", {});
   let current = null;            // aktive Session-ID
@@ -52,27 +53,34 @@
   const poster = (m) => { const h = hash(m.i) % 360; return `linear-gradient(160deg, hsl(${h} 45% 34%), hsl(${(h + 40) % 360} 55% 16%) 70%)`; };
 
   // ---------- Sessions ----------
-  const inPool = (m, min, genres) => m.r >= min && (!genres.length || m.g.some((g) => genres.includes(g)));
-  const poolSize = () => movies.filter((m) => inPool(m, prefs.minRating, prefs.genres)).length;
+  const inPool = (m, min, genres, y1 = YMIN, y2 = YMAX) => m.r >= min && (m.y >= y1 || y1 <= YMIN) && m.y <= y2 && (!genres.length || m.g.some((g) => genres.includes(g)));
+  const poolSize = () => movies.filter((m) => inPool(m, prefs.minRating, prefs.genres, prefs.y1, prefs.y2)).length;
   function newId() { return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5); }
   function createSession() {
     const id = newId();
     const seen = new Set(Object.values(sessions).flatMap((s) => s.films));
-    let pool = movies.filter((m) => inPool(m, prefs.minRating, prefs.genres));
+    let pool = movies.filter((m) => inPool(m, prefs.minRating, prefs.genres, prefs.y1, prefs.y2));
     const fresh = pool.filter((m) => !seen.has(m.i));
     if (fresh.length >= PER_SESSION) pool = fresh;
     // Zufällig, bekanntere Filme etwas wahrscheinlicher
     const key = (m) => Math.pow(hash(m.i + ":" + id) / 4294967296, 1 / Math.log10(m.v + 10));
     const films = pool.sort((a, b) => key(b) - key(a)).slice(0, PER_SESSION).map((m) => m.i);
-    sessions[id] = { id, created: Date.now(), min: prefs.minRating, genres: [...prefs.genres], films, mine: {}, partner: null };
+    sessions[id] = { id, created: Date.now(), min: prefs.minRating, genres: [...prefs.genres], y1: prefs.y1, y2: prefs.y2, films, mine: {}, partner: null };
     save();
     openSession(id);
   }
   const remaining = (s) => s.films.filter((tt) => s.mine[tt] === undefined);
   const matchesOf = (s) => (s.partner ? s.films.filter((tt) => s.mine[tt] === 1 && s.partner[tt] === 1) : []);
   const partnerDone = (s) => s.partner && s.films.every((tt) => s.partner[tt] !== undefined);
+  function years(y1, y2) {
+    if ((y1 || YMIN) <= YMIN && (y2 || YMAX) >= YMAX) return "";
+    if ((y1 || YMIN) <= YMIN) return `bis ${y2}`;
+    if ((y2 || YMAX) >= YMAX) return `ab ${y1}`;
+    return `${y1}–${y2}`;
+  }
   function describe(s) {
-    return `IMDb ab ${fmt(s.min)} · ${s.genres.length ? s.genres.join(", ") : "alle Genres"}`;
+    const y = years(s.y1, s.y2);
+    return `IMDb ab ${fmt(s.min)} · ${s.genres.length ? s.genres.join(", ") : "alle Genres"}${y ? " · " + y : ""}`;
   }
   function when(ts) { return new Date(ts).toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }); }
 
@@ -84,7 +92,7 @@
     s.genres.forEach((g) => { const i = GENRES.indexOf(g); if (i >= 0) gbits |= 1n << BigInt(i); });
     const films = s.films.map((tt) => indexOf.get(tt).toString(36)).join("-");
     const votes = s.films.map((tt) => (s.mine[tt] === 1 ? "1" : s.mine[tt] === 0 ? "0" : "x")).join("");
-    const code = ["2", s.id, me, Math.round(s.min * 10), gbits.toString(36), films, votes].join(".");
+    const code = ["3", s.id, me, Math.round(s.min * 10), gbits.toString(36), films, votes, s.y1 || YMIN, s.y2 || YMAX].join(".");
     return location.href.split("#")[0] + "#s=" + code;
   }
   let pendingNote = null;
@@ -93,8 +101,8 @@
     if (!m) return;
     $("share-overlay").hidden = true;
     history.replaceState(null, "", location.href.split("#")[0]);
-    const [ver, id, from, min, gb, filmStr, votes] = decodeURIComponent(m[1]).split(".");
-    if (ver !== "2" || !id || !PEOPLE.includes(from) || !filmStr) { toast("Der Link ist unvollständig. Lass ihn dir nochmal schicken."); return; }
+    const [ver, id, from, min, gb, filmStr, votes, ly1, ly2] = decodeURIComponent(m[1]).split(".");
+    if (!["2", "3"].includes(ver) || !id || !PEOPLE.includes(from) || !filmStr) { toast("Der Link ist unvollständig. Lass ihn dir nochmal schicken."); return; }
     if (from === me) { toast("Das ist dein eigener Link. Schick ihn an " + other() + "."); return; }
     if (!me) { me = PEOPLE.find((p) => p !== from); ls.set("ff.me", me); }
     const films = filmStr.split("-").map((x) => movies[parseInt(x, 36)]).filter(Boolean).map((mv) => mv.i);
@@ -103,7 +111,7 @@
     const partner = {};
     films.forEach((tt, i) => { if (votes?.[i] === "1") partner[tt] = 1; else if (votes?.[i] === "0") partner[tt] = 0; });
     const isNew = !sessions[id];
-    if (isNew) sessions[id] = { id, created: Date.now(), min: (+min || 70) / 10, genres, films, mine: {}, partner };
+    if (isNew) sessions[id] = { id, created: Date.now(), min: (+min || 70) / 10, genres, y1: +ly1 || YMIN, y2: +ly2 || YMAX, films, mine: {}, partner };
     const s = sessions[id];
     const before = new Set(matchesOf(s));
     s.partner = partner;
@@ -159,6 +167,7 @@
   function renderStart() {
     $("min-rating").value = prefs.minRating;
     $("min-out").textContent = fmt(+prefs.minRating);
+    syncYears();
     $("genre-chips").innerHTML = GENRES.map((g) => `<button type="button" aria-pressed="${prefs.genres.includes(g)}" data-g="${esc(g)}">${esc(g)}</button>`).join("");
     $("genre-hint").textContent = prefs.genres.length ? prefs.genres.length + " gewählt" : "alle";
     const n = poolSize();
@@ -310,7 +319,20 @@
     prefs.genres = prefs.genres.includes(g) ? prefs.genres.filter((x) => x !== g) : [...prefs.genres, g];
     save(); renderStart();
   };
-  $("min-rating").oninput = (e) => { prefs.minRating = +e.target.value; save(); $("min-out").textContent = fmt(prefs.minRating); const n = poolSize(); $("pool").textContent = n >= PER_SESSION ? `${n.toLocaleString("de-DE")} Filme passen, davon kommen ${PER_SESSION} zufällig.` : n ? `Nur ${n} Filme passen. Senk die IMDb-Grenze oder wähl mehr Genres.` : "Kein Film passt. Senk die IMDb-Grenze oder wähl andere Genres."; $("btn-start").disabled = !n; };
+  function poolText() {
+    const n = poolSize();
+    $("pool").textContent = n >= PER_SESSION ? `${n.toLocaleString("de-DE")} Filme passen, davon kommen ${PER_SESSION} zufällig.` : n ? `Nur ${n} Filme passen. Lockere die Filter etwas.` : "Kein Film passt. Lockere die Filter etwas.";
+    $("btn-start").disabled = !n;
+    $("btn-start").textContent = `${Math.min(n, PER_SESSION) || PER_SESSION} Filme ziehen`;
+  }
+  function syncYears() {
+    $("y1").min = $("y2").min = YMIN; $("y1").max = $("y2").max = YMAX;
+    $("y1").value = prefs.y1; $("y2").value = prefs.y2;
+    $("year-out").textContent = years(prefs.y1, prefs.y2) || "egal";
+  }
+  $("min-rating").oninput = (e) => { prefs.minRating = +e.target.value; save(); $("min-out").textContent = fmt(prefs.minRating); poolText(); };
+  $("y1").oninput = (e) => { prefs.y1 = Math.min(+e.target.value, prefs.y2); save(); syncYears(); poolText(); };
+  $("y2").oninput = (e) => { prefs.y2 = Math.max(+e.target.value, prefs.y1); save(); syncYears(); poolText(); };
   $("min-rating").onchange = () => renderStart();
   $("btn-start").onclick = createSession;
   $("btn-new").onclick = () => show("start");
