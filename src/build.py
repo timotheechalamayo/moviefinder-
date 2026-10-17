@@ -22,7 +22,8 @@ for m in movies:
     img = e.get('en') or (WM + m['b'] if m.get('b') else None) or e.get('imdb') or e.get('dew')
     if img: m['b'] = img.split('?')[0]
     else: m.pop('b', None)
-    de = e.get('de') or manual.get(m['i'])
+    de = e.get('de') if len(e.get('de') or '') >= 50 else None
+    de = manual.get(m['i']) or de
     if de: m['p'] = short_de(de)
     elif m.get('p'): m['p'] = ''   # nur englischer Text vorhanden
 data = json.dumps(movies, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
