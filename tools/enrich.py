@@ -1,7 +1,7 @@
 """Holt Plakate und deutsche Kurzbeschreibungen für alle Filme in src/movies.json.
 
 Läuft als GitHub Action (dort ist das Internet frei erreichbar) und schreibt src/enrich.json:
-  { "tt0111161": { "img": "<url>", "src": "enwiki|dewiki|imdb", "de": "<deutscher Text>" }, ... }
+  { "tt0111161": { "en": "<Plakat aus engl. Artikel>", "dew": "<Bild aus dt. Artikel>", "imdb": "<IMDb-Plakat>", "de": "<deutscher Text>" }, ... }
 Quellen: Wikidata (IMDb-ID -> Wikipedia-Artikel), Wikipedia-Seitenbilder und deutsche
 Artikel-Einleitungen; fehlt danach noch ein Bild, das Plakat von der IMDb-Titelseite.
 """
@@ -47,7 +47,7 @@ for k in range(0, len(ids), 150):
 def wiki(lang, titles, extracts):
     """Seitenbild (und optional Einleitung) für bis zu 20 Titel."""
     p = {"action": "query", "format": "json", "redirects": 1, "prop": "pageimages" + ("|extracts" if extracts else ""),
-         "piprop": "thumbnail", "pithumbsize": 600, "pilimit": 50, "titles": "|".join(titles)}
+         "piprop": "thumbnail", "pithumbsize": 600, "pilimit": 50, "pilicense": "any", "titles": "|".join(titles)}
     if extracts: p.update({"exintro": 1, "explaintext": 1, "exlimit": 20, "exsentences": 3})
     body = get(f"https://{lang}.wikipedia.org/w/api.php?" + urllib.parse.urlencode(p))
     if not body: return {}
@@ -69,25 +69,32 @@ def run(lang, key, extracts):
         for tt, t in chunk:
             r = res.get(t) or {}
             e = out.setdefault(tt, {})
-            if r.get("img") and "img" not in e: e["img"], e["src"] = r["img"], lang + "wiki"
-            if extracts and r.get("text") and "de" not in e: e["de"] = r["text"].strip()
+            if r.get("img"): e["en" if lang == "en" else "dew"] = r["img"]
+            if extracts and r.get("text") and not e.get("de"): e["de"] = r["text"].strip()
         if k % 400 == 0: print(lang, k, "/", len(pairs), flush=True)
         time.sleep(0.3)
 
 run("en", "en", False)   # englische Artikel haben meist das Kinoplakat
-run("de", "de", True)    # deutsche Einleitung als Kurzbeschreibung, Bild falls noch keins
+run("de", "de", True)    # deutsche Einleitung als Kurzbeschreibung
+for e in out.values():   # Felder aus dem ersten Lauf
+    e.pop("img", None); e.pop("src", None)
 
-# 3) Fehlt noch ein Bild: Plakat von der IMDb-Titelseite (og:image)
-missing = [tt for tt in ids if "img" not in out.get(tt, {})]
+# 3) Ohne Plakat aus dem englischen Artikel: Bild aus der IMDb-Suche (liefert das IMDb-Titelbild)
+missing = [tt for tt in ids if not out.get(tt, {}).get("en")]
 print("imdb fallback for", len(missing), flush=True)
 for n, tt in enumerate(missing):
-    html = get(f"https://www.imdb.com/title/{tt}/", accept="text/html", tries=2)
-    m = html and re.search(r'<meta property="og:image" content="([^"]+)"', html)
-    if m and "imdb_logo" not in m.group(1):
-        out.setdefault(tt, {}).update(img=m.group(1), src="imdb")
-    if n % 50 == 0: print("imdb", n, "/", len(missing), flush=True)
-    time.sleep(0.8)
+    body = get(f"https://v3.sg.media-imdb.com/suggestion/x/{tt}.json", tries=2)
+    try:
+        hit = next((d for d in json.loads(body or "{}").get("d", []) if d.get("id") == tt), None)
+    except ValueError:
+        hit = None
+    url = hit and (hit.get("i") or {}).get("imageUrl")
+    if url:
+        # verkleinerte Fassung (ca. 600 px breit) statt Originalgröße
+        out.setdefault(tt, {})["imdb"] = re.sub(r"\._V1_.*\.jpg$", "._V1_SX600.jpg", url) if "._V1_" in url else url.replace(".jpg", "._V1_SX600.jpg")
+    if n % 100 == 0: print("imdb", n, "/", len(missing), flush=True)
+    time.sleep(0.25)
 
 json.dump(out, open(out_path, "w", encoding="utf-8"), ensure_ascii=False, indent=0, sort_keys=True)
-print("done:", sum(1 for tt in ids if out.get(tt, {}).get("img")), "images,",
+print("done:", sum(1 for tt in ids if out.get(tt, {}).get("en")), "enwiki,", sum(1 for tt in ids if out.get(tt, {}).get("imdb")), "imdb,",
       sum(1 for tt in ids if out.get(tt, {}).get("de")), "german texts of", len(ids))
