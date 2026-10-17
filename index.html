@@ -146,6 +146,29 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
 .year { text-shadow: 0 1px 8px rgb(0 0 0 / .7); }
 .match .mini { position: relative; }
 .match .mini-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px; }
+.ptitle { margin: 0; font-family: var(--display); font-weight: 800; font-size: 32px; line-height: 1; text-transform: uppercase; text-wrap: balance; }
+.ptext { margin: 0; color: var(--muted); }
+.glabel { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.glabel span { text-transform: none; letter-spacing: 0; color: var(--ink); font-weight: 500; }
+.gchips { display: flex; flex-wrap: wrap; gap: 7px; }
+.gchips button { border: 1px solid var(--line); background: var(--chip); border-radius: 999px; padding: 6px 12px; font-size: 14px; color: var(--ink); }
+.gchips button[aria-pressed="true"] { background: var(--velvet); border-color: var(--velvet); color: #fff; }
+.big-btn { padding: 14px; font-size: 16px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.past { display: flex; flex-direction: column; gap: 8px; }
+.past h2 { margin: 6px 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.sess { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.sess b { font-size: 15px; }
+.sess .sub { grid-column: 1; font-size: 12.5px; color: var(--muted); }
+.sess .pill { grid-row: 1 / span 2; grid-column: 2; border-radius: 999px; padding: 3px 10px; font-size: 12.5px; font-weight: 600; background: var(--chip); color: var(--muted); }
+.sess .pill.hot { background: var(--velvet); color: #fff; }
+.sbar { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.progress { display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 13px; flex: 1; justify-content: flex-end; }
+.ptrack { width: 120px; max-width: 40vw; height: 6px; border-radius: 999px; background: var(--chip); overflow: hidden; }
+#prog-bar { height: 100%; width: 0; background: var(--gold); transition: width .3s; }
+.ssum { font-size: 12.5px; color: var(--muted); margin-top: -6px; }
+.pick.one { grid-template-columns: 1fr; }
 </style>
 <style>body{margin:0} :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}</style>
 </head>
@@ -159,48 +182,56 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
     </div>
   </header>
 
-  <div class="tabs" role="tablist">
-    <button id="tab-swipe" role="tab" aria-selected="true">Swipen</button>
-    <button id="tab-matches" role="tab" aria-selected="false">Matches<span class="count" id="match-count">0</span></button>
-  </div>
-
-  <section id="view-swipe" class="view">
-    <div class="filters">
+  <!-- Start: neue Session einrichten -->
+  <section id="view-start" class="view">
+    <div class="panel">
+      <h1 class="ptitle">Worauf habt ihr heute Lust?</h1>
       <div class="rating-ctl">
         <label for="min-rating">IMDb mindestens <output id="min-out">7,0</output></label>
         <input id="min-rating" type="range" min="5" max="9" step="0.5" value="7">
       </div>
-      <select id="genre" aria-label="Genre"><option value="">Alle Genres</option></select>
+      <div class="glabel">Genres <span id="genre-hint">alle</span></div>
+      <div class="gchips" id="genre-chips"></div>
       <div class="pool" id="pool"></div>
+      <button class="btn big-btn" id="btn-start">15 Filme ziehen</button>
     </div>
+    <div class="past" id="past"></div>
+  </section>
+
+  <!-- Swipen -->
+  <section id="view-swipe" class="view" hidden>
+    <div class="sbar">
+      <button class="linkbtn" id="btn-back">← Sessions</button>
+      <div class="progress"><span id="prog-text">1 / 15</span><div class="ptrack"><div id="prog-bar"></div></div></div>
+    </div>
+    <div class="ssum" id="ssum"></div>
     <div class="stage" id="stage"></div>
     <div class="actions">
       <button class="act undo" id="btn-undo" aria-label="Letzten Swipe zurücknehmen" title="Zurück">↺</button>
       <button class="act no" id="btn-no" aria-label="Nein">✕</button>
       <button class="act yes" id="btn-yes" aria-label="Ja, will ich sehen">♥</button>
     </div>
-    <button class="sendbar" id="btn-send-top">Likes an <span class="o-name">Pauli</span> schicken</button>
+    <button class="sendbar" id="btn-invite"><span class="o-name">Pauli</span> zu dieser Session einladen</button>
   </section>
 
-  <section id="view-matches" class="view" hidden>
-    <div class="sync">
-      <div class="sync-row">
-        <div>
-          <b>Abgleichen</b>
-          <p id="sync-status">Noch nichts von Pauli bekommen.</p>
-        </div>
-      </div>
-      <button class="btn" id="btn-send">Meine Likes an <span class="o-name">Pauli</span> schicken</button>
-      <p class="small">Schick den Link per WhatsApp oder SMS. Wenn <span class="o-name">Pauli</span> ihn öffnet, erscheinen dort eure Matches. Danach schickt <span class="o-name">Pauli</span> dir den eigenen Link zurück.</p>
+  <!-- Ergebnis einer Session -->
+  <section id="view-result" class="view" hidden>
+    <div class="sbar"><button class="linkbtn" id="btn-back2">← Sessions</button></div>
+    <div class="panel">
+      <h1 class="ptitle" id="res-title">Session fertig</h1>
+      <p class="ptext" id="res-text"></p>
+      <button class="btn" id="btn-send">Meine Swipes an <span class="o-name">Pauli</span> schicken</button>
+      <button class="btn ghost" id="btn-continue" hidden>Weiter swipen</button>
     </div>
     <div class="matches" id="match-list"></div>
+    <button class="btn ghost" id="btn-new">Neue Session starten</button>
   </section>
 </div>
 
 <div class="overlay" id="pick-overlay" hidden>
   <div class="sheet">
     <h3>Wer swipt?</h3>
-    <p>Jede Person swipt auf dem eigenen Handy. Danach schickt ihr euch gegenseitig einen Link, und die Filme, die ihr beide mögt, werden zu Matches.</p>
+    <p>Jede Person swipt auf dem eigenen Handy. Eine Session hat 15 Filme. Ihr schickt euch die Session per Link, und alles, was ihr beide mögt, wird ein Match.</p>
     <div class="pick">
       <button class="btn" id="pick-Tim">Ich bin Tim</button>
       <button class="btn" id="pick-Pauli">Ich bin Pauli</button>
@@ -214,9 +245,8 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
     <p id="match-lead">Ihr wollt beide sehen:</p>
     <div class="big" id="match-title"></div>
     <p id="match-sub"></p>
-    <div class="pick">
-      <button class="btn ghost" id="match-close">Weiter swipen</button>
-      <button class="btn" id="match-show">Alle Matches</button>
+    <div class="pick one">
+      <button class="btn" id="match-close">Weiter</button>
     </div>
   </div>
 </div>
@@ -239,6 +269,7 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
 <script>
 (() => {
   const PEOPLE = ["Tim", "Pauli"];
+  const PER_SESSION = 15;
   const $ = (id) => document.getElementById(id);
   const ls = {
     get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -246,20 +277,27 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
   };
 
   const movies = JSON.parse($("movie-data").textContent);
+  const byId = new Map(movies.map((m) => [m.i, m]));
   const indexOf = new Map(movies.map((m, i) => [m.i, i]));
-  const genres = [...new Set(movies.flatMap((m) => m.g))].sort((a, b) => a.localeCompare(b, "de"));
+  const GENRES = [...new Set(movies.flatMap((m) => m.g))].sort((a, b) => a.localeCompare(b, "de"));
 
   let me = ls.get("ff.me", null);
-  let settings = Object.assign({ minRating: 7, genre: "" }, ls.get("ff.settings", {}));
-  let mine = ls.get("ff.mine", {});               // { tt: 1 | 0 }
-  let partner = ls.get("ff.partner", null);       // { name, likes: [tt], at }
+  let prefs = Object.assign({ minRating: 7, genres: [] }, ls.get("ff.prefs", {}));
+  // sessions[id] = { id, created, min, genres, films: [tt], mine: {tt: 1|0}, partner: {tt: 1|0} | null }
+  let sessions = ls.get("ff.sessions", {});
+  let current = null;            // aktive Session-ID
+  let view = "start";
   const undoStack = [];
-  let deck = [];
-  let tab = "swipe";
 
   const other = () => PEOPLE.find((p) => p !== me) || "Pauli";
   const fmt = (n) => n.toFixed(1).replace(".", ",");
   function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3400); }
+  function save() { ls.set("ff.sessions", sessions); ls.set("ff.prefs", prefs); }
+  const S = () => sessions[current];
+
+  // ---------- Plakate ----------
   const IMG = "https://upload.wikimedia.org/wikipedia/";
   let wikiCache = ls.get("ff.wikiimg", {});
   const imgSrc = (m) => (m.b ? IMG + m.b : wikiCache[m.i] || "");
@@ -274,55 +312,88 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
       const hit = pages.find((p) => p.thumbnail);
       if (hit) {
         wikiCache[m.i] = hit.thumbnail.source;
-        document.querySelectorAll(`[data-id="${m.i}"] img.poster`).forEach((img) => { img.src = hit.thumbnail.source; img.hidden = false; });
+        document.querySelectorAll(`[data-id="${m.i}"] img`).forEach((img) => { img.src = hit.thumbnail.source; img.hidden = false; });
       }
     } catch {}
     ls.set("ff.wikiimg", wikiCache);
   }
-  const imgTag = (m, cls) => `<img class="${cls}" src="${esc(imgSrc(m))}" alt="" loading="eager" draggable="false" ${imgSrc(m) ? "" : "hidden"} onerror="this.hidden=true">`;
+  const imgTag = (m, cls) => `<img class="${cls}" src="${esc(imgSrc(m))}" alt="" draggable="false" ${imgSrc(m) ? "" : "hidden"} onerror="this.hidden=true">`;
   const poster = (m) => { const h = hash(m.i) % 360; return `linear-gradient(160deg, hsl(${h} 45% 34%), hsl(${(h + 40) % 360} 55% 16%) 70%)`; };
-  const partnerLikes = () => new Set(partner ? partner.likes : []);
-  function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]); }
-  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 3200); }
-  function save() { ls.set("ff.mine", mine); ls.set("ff.settings", settings); ls.set("ff.partner", partner); }
 
-  // ---------- link exchange ----------
-  function b64url(bytes) { let s = ""; bytes.forEach((b) => (s += String.fromCharCode(b))); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
-  function unb64url(str) { const s = atob(str.replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(s, (c) => c.charCodeAt(0)); }
-  function makeLink() {
-    const bits = new Uint8Array(Math.ceil(movies.length / 8));
-    for (const [tt, v] of Object.entries(mine)) { const i = indexOf.get(tt); if (v === 1 && i !== undefined) bits[i >> 3] |= 1 << (i & 7); }
-    let end = bits.length; while (end > 0 && bits[end - 1] === 0) end--;
-    const code = ["1", me, Math.round(settings.minRating * 10), genres.indexOf(settings.genre) + 1, b64url(bits.slice(0, end))].join(".");
-    return location.href.split("#")[0] + "#l=" + code;
+  // ---------- Sessions ----------
+  const inPool = (m, min, genres) => m.r >= min && (!genres.length || m.g.some((g) => genres.includes(g)));
+  const poolSize = () => movies.filter((m) => inPool(m, prefs.minRating, prefs.genres)).length;
+  function newId() { return Date.now().toString(36).slice(-5) + Math.random().toString(36).slice(2, 5); }
+  function createSession() {
+    const id = newId();
+    const seen = new Set(Object.values(sessions).flatMap((s) => s.films));
+    let pool = movies.filter((m) => inPool(m, prefs.minRating, prefs.genres));
+    const fresh = pool.filter((m) => !seen.has(m.i));
+    if (fresh.length >= PER_SESSION) pool = fresh;
+    // Zufällig, bekanntere Filme etwas wahrscheinlicher
+    const key = (m) => Math.pow(hash(m.i + ":" + id) / 4294967296, 1 / Math.log10(m.v + 10));
+    const films = pool.sort((a, b) => key(b) - key(a)).slice(0, PER_SESSION).map((m) => m.i);
+    sessions[id] = { id, created: Date.now(), min: prefs.minRating, genres: [...prefs.genres], films, mine: {}, partner: null };
+    save();
+    openSession(id);
   }
+  const remaining = (s) => s.films.filter((tt) => s.mine[tt] === undefined);
+  const matchesOf = (s) => (s.partner ? s.films.filter((tt) => s.mine[tt] === 1 && s.partner[tt] === 1) : []);
+  const partnerDone = (s) => s.partner && s.films.every((tt) => s.partner[tt] !== undefined);
+  function describe(s) {
+    return `IMDb ab ${fmt(s.min)} · ${s.genres.length ? s.genres.join(", ") : "alle Genres"}`;
+  }
+  function when(ts) { return new Date(ts).toLocaleString("de-DE", { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }); }
+
+  // ---------- Link-Austausch ----------
+  // #s=2.<id>.<von>.<min*10>.<genre-bits>.<film-indizes>.<stimmen>
+  function makeLink() {
+    const s = S();
+    let gbits = 0n;
+    s.genres.forEach((g) => { const i = GENRES.indexOf(g); if (i >= 0) gbits |= 1n << BigInt(i); });
+    const films = s.films.map((tt) => indexOf.get(tt).toString(36)).join("-");
+    const votes = s.films.map((tt) => (s.mine[tt] === 1 ? "1" : s.mine[tt] === 0 ? "0" : "x")).join("");
+    const code = ["2", s.id, me, Math.round(s.min * 10), gbits.toString(36), films, votes].join(".");
+    return location.href.split("#")[0] + "#s=" + code;
+  }
+  let pendingNote = null;
   function readLink() {
-    const m = location.hash.match(/^#l=(.+)$/);
+    const m = location.hash.match(/^#s=(.+)$/);
     if (!m) return;
     $("share-overlay").hidden = true;
     history.replaceState(null, "", location.href.split("#")[0]);
-    const [ver, from, min, g, data] = decodeURIComponent(m[1]).split(".");
-    if (ver !== "1" || !PEOPLE.includes(from)) { toast("Der Link ist unvollständig. Lass ihn dir nochmal schicken."); return; }
+    const [ver, id, from, min, gb, filmStr, votes] = decodeURIComponent(m[1]).split(".");
+    if (ver !== "2" || !id || !PEOPLE.includes(from) || !filmStr) { toast("Der Link ist unvollständig. Lass ihn dir nochmal schicken."); return; }
     if (from === me) { toast("Das ist dein eigener Link. Schick ihn an " + other() + "."); return; }
     if (!me) { me = PEOPLE.find((p) => p !== from); ls.set("ff.me", me); }
-    let bits;
-    try { bits = data ? unb64url(data) : new Uint8Array(0); } catch { toast("Der Link ist beschädigt. Lass ihn dir nochmal schicken."); return; }
-    const likes = [];
-    movies.forEach((mv, i) => { if (bits[i >> 3] & (1 << (i & 7))) likes.push(mv.i); });
-    const before = new Set(matches().map((x) => x.i));
-    partner = { name: from, likes, at: Date.now() };
-    // Gleiche Filter wie die andere Person, damit ihr dieselben Filme seht
-    if (!Object.keys(mine).length) settings = { minRating: (+min || 70) / 10, genre: genres[(+g || 0) - 1] || "" };
+    const films = filmStr.split("-").map((x) => movies[parseInt(x, 36)]).filter(Boolean).map((mv) => mv.i);
+    let gbits = 0n; try { gbits = BigInt(parseInt(gb || "0", 36)); } catch {}
+    const genres = GENRES.filter((_, i) => (gbits >> BigInt(i)) & 1n);
+    const partner = {};
+    films.forEach((tt, i) => { if (votes?.[i] === "1") partner[tt] = 1; else if (votes?.[i] === "0") partner[tt] = 0; });
+    const isNew = !sessions[id];
+    if (isNew) sessions[id] = { id, created: Date.now(), min: (+min || 70) / 10, genres, films, mine: {}, partner };
+    const s = sessions[id];
+    const before = new Set(matchesOf(s));
+    s.partner = partner;
     save();
-    const fresh = matches().filter((x) => !before.has(x.i));
-    pendingImport = { from, likes: likes.length, fresh };
+    current = id;
+    const fresh = matchesOf(s).filter((tt) => !before.has(tt));
+    const done = Object.keys(partner).length;
+    if (isNew) pendingNote = { text: `${from} hat dich zu einer Session eingeladen (${describe(s)}). ${done ? from + " hat schon " + done + " von " + films.length + " Filmen geswipt." : ""}` };
+    else if (fresh.length) pendingNote = { fresh };
+    else pendingNote = { text: `${from}s Swipes übernommen.` };
+    view = remaining(s).length ? "swipe" : "result";
   }
-  let pendingImport = null;
 
   async function share() {
-    if (!me) return;
+    if (!me || !S()) return;
+    const s = S();
     const url = makeLink();
-    const text = `Meine Filmfinder-Likes (${Object.values(mine).filter((v) => v === 1).length} Filme). Öffne den Link, dann siehst du unsere Matches:`;
+    const left = remaining(s).length;
+    const text = left === s.films.length
+      ? `Filmfinder-Session: ${describe(s)}. Swipe die ${s.films.length} Filme, dann sehen wir unsere Matches:`
+      : `Meine Swipes für unsere Filmfinder-Session (${describe(s)}):`;
     if (navigator.share) {
       try { await navigator.share({ title: "Filmfinder", text, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
     }
@@ -337,50 +408,63 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
   };
   $("share-close").onclick = () => ($("share-overlay").hidden = true);
   $("btn-send").onclick = share;
-  $("btn-send-top").onclick = share;
+  $("btn-invite").onclick = share;
 
-  // ---------- deck ----------
-  function pool() { return movies.filter((m) => m.r >= settings.minRating && (!settings.genre || m.g.includes(settings.genre))); }
-  function buildDeck() {
-    const pl = partnerLikes();
-    const open = pool().filter((m) => mine[m.i] === undefined);
-    const key = (m) => (hash(m.i + ":1") / 4294967296) / Math.log10(m.v + 10);
-    open.sort((a, b) => key(a) - key(b));
-    // Filme, die die andere Person schon mag, kommen jede dritte Karte dran
-    const liked = open.filter((m) => pl.has(m.i)), rest = open.filter((m) => !pl.has(m.i));
-    deck = [];
-    while (liked.length || rest.length) {
-      for (let k = 0; k < 2 && rest.length; k++) deck.push(rest.shift());
-      if (liked.length) deck.push(liked.shift());
-    }
+  // ---------- Render ----------
+  function show(v) {
+    view = v;
+    ["start", "swipe", "result"].forEach((n) => ($("view-" + n).hidden = n !== v));
+    window.scrollTo(0, 0);
+    render();
   }
-  function matches() { const pl = partnerLikes(); return movies.filter((m) => mine[m.i] === 1 && pl.has(m.i)).sort((x, y) => y.r - x.r); }
-
-  // ---------- render ----------
+  function render() {
+    PEOPLE.forEach((p) => $("who-" + p).setAttribute("aria-pressed", String(p === me)));
+    $("pick-overlay").hidden = !!me;
+    document.querySelectorAll(".o-name").forEach((el) => (el.textContent = other()));
+    if (view === "start") renderStart();
+    if (view === "swipe") renderSwipe();
+    if (view === "result") renderResult();
+  }
+  function renderStart() {
+    $("min-rating").value = prefs.minRating;
+    $("min-out").textContent = fmt(+prefs.minRating);
+    $("genre-chips").innerHTML = GENRES.map((g) => `<button type="button" aria-pressed="${prefs.genres.includes(g)}" data-g="${esc(g)}">${esc(g)}</button>`).join("");
+    $("genre-hint").textContent = prefs.genres.length ? prefs.genres.length + " gewählt" : "alle";
+    const n = poolSize();
+    $("pool").textContent = n >= PER_SESSION ? `${n.toLocaleString("de-DE")} Filme passen, davon kommen ${PER_SESSION} zufällig.` : n ? `Nur ${n} Filme passen. Senk die IMDb-Grenze oder wähl mehr Genres.` : "Kein Film passt. Senk die IMDb-Grenze oder wähl andere Genres.";
+    $("btn-start").disabled = !n;
+    $("btn-start").textContent = `${Math.min(n, PER_SESSION) || PER_SESSION} Filme ziehen`;
+    const list = Object.values(sessions).sort((a, b) => b.created - a.created).slice(0, 12);
+    $("past").innerHTML = list.length ? `<h2>Eure Sessions</h2>` + list.map((s) => {
+      const left = remaining(s).length, mt = matchesOf(s).length;
+      const state = left ? `noch ${left} zu swipen` : !s.partner ? `warte auf ${other()}` : !partnerDone(s) ? `${other()} swipt noch` : "fertig";
+      return `<button class="sess" data-s="${s.id}"><b>${when(s.created)}</b><span class="pill ${mt ? "hot" : ""}">${mt} ${mt === 1 ? "Match" : "Matches"}</span><span class="sub">${esc(describe(s))} · ${state}</span></button>`;
+    }).join("") : "";
+  }
   function cardHTML(m) {
     const meta = [m.d && `Regie ${esc(m.d)}`, m.c.length && esc(m.c.join(", ")), m.m && `${m.m} Min.`].filter(Boolean).join(" · ");
     return `${imgTag(m, "poster")}<div class="shade"></div><div class="grain"></div>
       <div class="rating">★ ${fmt(m.r)} <small>${(m.v / 1000).toFixed(0)}k Stimmen</small></div>
       <div class="year">${m.y}</div>
       <div class="stamp yes">Ja</div><div class="stamp no">Nö</div>
-      ${partnerLikes().has(m.i) ? `<div class="partner">♥ ${esc(other())} will den sehen</div>` : ""}
       <h2>${esc(m.t)}</h2>
       <div class="chips">${m.g.map((g) => `<span>${esc(g)}</span>`).join("")}</div>
       <div class="meta">${meta}</div>
       <div class="plot">${m.p ? esc(m.p) : "<em>Keine Beschreibung vorhanden.</em>"}</div>
       <a class="imdb" href="https://www.imdb.com/title/${m.i}/" target="_blank" rel="noopener">Auf IMDb ansehen ↗</a>`;
   }
-  function renderStage() {
+  function renderSwipe() {
+    const s = S();
+    const left = remaining(s);
+    const done = s.films.length - left.length;
+    $("prog-text").textContent = `${Math.min(done + 1, s.films.length)} / ${s.films.length}`;
+    $("prog-bar").style.width = (done / s.films.length) * 100 + "%";
+    $("ssum").textContent = describe(s);
+    $("btn-undo").disabled = undoStack.length === 0;
     const stage = $("stage");
     stage.innerHTML = "";
-    $("pool").textContent = `${pool().length} Filme ab IMDb ${fmt(settings.minRating)}${settings.genre ? " im Genre " + settings.genre : ""} · noch ${deck.length} offen`;
-    $("btn-yes").disabled = $("btn-no").disabled = !deck.length;
-    $("btn-undo").disabled = undoStack.length === 0;
-    if (!deck.length) {
-      stage.innerHTML = `<div class="empty"><strong>Alles geswipt</strong><span>In diesem Filter ist nichts mehr offen. Senk die IMDb-Grenze oder wähl ein anderes Genre.</span></div>`;
-      return;
-    }
-    deck.slice(0, 2).reverse().forEach((m, i, arr) => {
+    left.slice(0, 2).reverse().forEach((tt, i, arr) => {
+      const m = byId.get(tt);
       const el = document.createElement("article");
       el.className = "card" + (i < arr.length - 1 ? " back" : "");
       el.style.setProperty("--poster", poster(m));
@@ -391,43 +475,53 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
       lookupPoster(m);
     });
   }
-  function renderMatches() {
-    const list = matches();
-    $("match-count").textContent = list.length;
+  function renderResult() {
+    const s = S();
     const o = other();
-    document.querySelectorAll(".o-name").forEach((el) => (el.textContent = o));
-    $("sync-status").textContent = partner
-      ? `${o}s Likes zuletzt bekommen am ${new Date(partner.at).toLocaleString("de-DE", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} (${partner.likes.length} Filme). Für neue Matches schickt euch nach dem Swipen wieder eure Links.`
-      : `Noch nichts von ${o} bekommen. Schick ${o} deinen Link, dann kommt ein Link zurück.`;
-    const box = $("match-list");
-    if (!list.length) {
-      box.innerHTML = `<div class="empty" style="position:static;min-height:180px"><strong>Noch kein Match</strong><span>Sobald ihr beide bei einem Film ♥ gedrückt und eure Links getauscht habt, steht er hier.</span></div>`;
-      return;
+    const mt = matchesOf(s);
+    const left = remaining(s).length;
+    $("btn-continue").hidden = !left;
+    if (left) {
+      $("res-title").textContent = "Session offen";
+      $("res-text").textContent = `Du hast noch ${left} von ${s.films.length} Filmen vor dir.`;
+    } else if (!s.partner) {
+      $("res-title").textContent = "Deine 15 sind durch";
+      $("res-text").textContent = `Schick ${o} die Session. Sobald ${o} geswipt und dir den Link zurückgeschickt hat, siehst du hier eure Matches.`;
+    } else if (!partnerDone(s)) {
+      $("res-title").textContent = mt.length ? `${mt.length} ${mt.length === 1 ? "Match" : "Matches"} bisher` : "Fast geschafft";
+      $("res-text").textContent = `${o} hat erst ${Object.keys(s.partner).length} von ${s.films.length} Filmen geswipt. Schick deine Swipes, damit ${o} am Ende eure Matches sieht.`;
+    } else {
+      $("res-title").textContent = mt.length ? (mt.length === 1 ? "Ein Match!" : `${mt.length} Matches!`) : "Kein Match";
+      $("res-text").textContent = mt.length
+        ? `Diese Filme wollt ihr beide sehen. Schick ${o} noch deine Swipes, falls ${o} das Ergebnis noch nicht hat.`
+        : `Diesmal war nichts dabei, was ihr beide sehen wollt. Startet einfach eine neue Session.`;
     }
-    box.innerHTML = list.map((m) => `<div class="match">
+    $("match-list").innerHTML = mt.map((tt) => {
+      const m = byId.get(tt);
+      return `<div class="match" data-id="${m.i}">
         <div class="mini" style="--poster:${poster(m)}">${esc(m.t.split(" ").slice(0, 3).join(" "))}${imgTag(m, "mini-img")}</div>
         <div><b>${esc(m.t)}</b>
           <div class="sub"><span class="r">★ ${fmt(m.r)}</span> · ${m.y}${m.m ? " · " + m.m + " Min." : ""} · ${esc(m.g.slice(0, 3).join(", "))}</div>
           <a href="https://www.imdb.com/title/${m.i}/" target="_blank" rel="noopener">Auf IMDb ↗</a></div>
-      </div>`).join("");
-  }
-  function syncFilterUI() { $("min-rating").value = settings.minRating; $("min-out").textContent = fmt(+settings.minRating); $("genre").value = settings.genre; }
-  function renderAll() {
-    PEOPLE.forEach((p) => $("who-" + p).setAttribute("aria-pressed", String(p === me)));
-    $("pick-overlay").hidden = !!me;
-    buildDeck(); syncFilterUI(); renderStage(); renderMatches();
+      </div>`;
+    }).join("");
   }
 
-  // ---------- swiping ----------
+  // ---------- Swipen ----------
   function swipe(like) {
-    const m = deck[0];
-    if (!m || !me) return;
-    const card = $("stage").querySelector(`.card[data-id="${m.i}"]`);
-    mine[m.i] = like ? 1 : 0;
-    undoStack.push(m.i);
+    const s = S();
+    const tt = remaining(s)[0];
+    if (!tt || !me) return;
+    const m = byId.get(tt);
+    const card = $("stage").querySelector(`.card[data-id="${tt}"]`);
+    s.mine[tt] = like ? 1 : 0;
+    undoStack.push(tt);
     save();
-    const isMatch = like && partnerLikes().has(m.i);
-    const finish = () => { deck.shift(); renderStage(); renderMatches(); if (isMatch) showMatch(m); };
+    const isMatch = like && s.partner?.[tt] === 1;
+    const finish = () => {
+      if (isMatch) showMatch(m);
+      if (!remaining(s).length) show("result"); else renderSwipe();
+    };
     if (card) {
       card.style.transform = `translateX(${like ? 140 : -140}%) rotate(${like ? 22 : -22}deg)`;
       card.style.opacity = "0";
@@ -436,13 +530,13 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
   }
   function undo() {
     const tt = undoStack.pop();
-    if (!tt) return;
-    delete mine[tt];
+    if (!tt || !S()) return;
+    const s = S();
+    delete s.mine[tt];
+    // die zurückgenommene Karte wieder nach vorn
+    s.films = [tt, ...s.films.filter((x) => x !== tt)];
     save();
-    buildDeck();
-    const i = deck.findIndex((m) => m.i === tt);
-    if (i > 0) deck.unshift(deck.splice(i, 1)[0]);
-    renderStage(); renderMatches();
+    if (view !== "swipe") show("swipe"); else renderSwipe();
   }
   function attachDrag(el) {
     let x0 = 0, y0 = 0, dx = 0, active = false;
@@ -474,47 +568,49 @@ textarea { width: 100%; font: 12px/1.4 var(--mono); background: var(--chip); col
     $("match-overlay").hidden = false;
   }
 
-  // ---------- wiring ----------
-  function setMe(p) { me = p; ls.set("ff.me", p); undoStack.length = 0; renderAll(); }
+  // ---------- Bedienung ----------
+  function setMe(p) { me = p; ls.set("ff.me", p); render(); }
   PEOPLE.forEach((p) => { $("who-" + p).onclick = () => setMe(p); $("pick-" + p).onclick = () => setMe(p); });
-  function setTab(t) {
-    tab = t;
-    $("tab-swipe").setAttribute("aria-selected", String(t === "swipe"));
-    $("tab-matches").setAttribute("aria-selected", String(t === "matches"));
-    $("view-swipe").hidden = t !== "swipe";
-    $("view-matches").hidden = t !== "matches";
-  }
-  $("tab-swipe").onclick = () => setTab("swipe");
-  $("tab-matches").onclick = () => setTab("matches");
+  function openSession(id) { current = id; undoStack.length = 0; show(remaining(S()).length ? "swipe" : "result"); }
+  $("past").onclick = (e) => { const b = e.target.closest("[data-s]"); if (b) { current = b.dataset.s; undoStack.length = 0; show("result"); } };
+  $("genre-chips").onclick = (e) => {
+    const b = e.target.closest("[data-g]"); if (!b) return;
+    const g = b.dataset.g;
+    prefs.genres = prefs.genres.includes(g) ? prefs.genres.filter((x) => x !== g) : [...prefs.genres, g];
+    save(); renderStart();
+  };
+  $("min-rating").oninput = (e) => { prefs.minRating = +e.target.value; save(); $("min-out").textContent = fmt(prefs.minRating); const n = poolSize(); $("pool").textContent = n >= PER_SESSION ? `${n.toLocaleString("de-DE")} Filme passen, davon kommen ${PER_SESSION} zufällig.` : n ? `Nur ${n} Filme passen. Senk die IMDb-Grenze oder wähl mehr Genres.` : "Kein Film passt. Senk die IMDb-Grenze oder wähl andere Genres."; $("btn-start").disabled = !n; };
+  $("min-rating").onchange = () => renderStart();
+  $("btn-start").onclick = createSession;
+  $("btn-new").onclick = () => show("start");
+  $("btn-back").onclick = () => show("start");
+  $("btn-back2").onclick = () => show("start");
+  $("btn-continue").onclick = () => show("swipe");
   $("btn-yes").onclick = () => swipe(true);
   $("btn-no").onclick = () => swipe(false);
   $("btn-undo").onclick = undo;
   $("match-close").onclick = () => ($("match-overlay").hidden = true);
-  $("match-show").onclick = () => { $("match-overlay").hidden = true; setTab("matches"); };
-  $("min-rating").oninput = (e) => { $("min-out").textContent = fmt(+e.target.value); };
-  $("min-rating").onchange = (e) => { settings.minRating = +e.target.value; save(); renderAll(); };
-  $("genre").insertAdjacentHTML("beforeend", genres.map((g) => `<option value="${esc(g)}">${esc(g)}</option>`).join(""));
-  $("genre").onchange = (e) => { settings.genre = e.target.value; save(); renderAll(); };
   document.addEventListener("keydown", (e) => {
-    if (tab !== "swipe" || e.target.closest("input, select, textarea")) return;
+    if (view !== "swipe" || e.target.closest("input, select, textarea")) return;
     if (e.key === "ArrowRight") swipe(true);
     else if (e.key === "ArrowLeft") swipe(false);
     else if (e.key === "Backspace") undo();
   });
-  window.addEventListener("hashchange", () => { readLink(); afterImport(); renderAll(); });
+  window.addEventListener("hashchange", () => { readLink(); boot(); });
 
-  function afterImport() {
-    if (!pendingImport) return;
-    const { from, likes, fresh } = pendingImport;
-    pendingImport = null;
-    if (fresh.length === 1) showMatch(fresh[0]);
-    else if (fresh.length > 1) showMatch(null, `${fresh.length} Matches!`, `${from} hat ${likes} Filme gemocht. Ihr habt ${fresh.length} neue gemeinsame Filme.`);
-    else toast(`${from}s ${likes} Likes übernommen. Swipe los, Treffer werden sofort zum Match.`);
+  function boot() {
+    if (current && S()) show(view); else show("start");
+    const note = pendingNote; pendingNote = null;
+    if (!note) return;
+    if (note.fresh) {
+      const f = note.fresh.map((tt) => byId.get(tt));
+      if (f.length === 1) showMatch(f[0]);
+      else showMatch(null, `${f.length} Matches!`, `${other()}s Swipes sind da. Ihr habt ${f.length} neue gemeinsame Filme.`);
+    } else if (note.text) toast(note.text);
   }
 
   readLink();
-  renderAll();
-  afterImport();
+  boot();
 })();
 
 </script>

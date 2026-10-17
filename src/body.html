@@ -1,0 +1,91 @@
+<div class="app">
+  <header>
+    <div class="brand">Film<span>finder</span></div>
+    <div class="who" role="group" aria-label="Wer swipt auf diesem Handy?">
+      <button id="who-Tim" aria-pressed="false">Tim</button>
+      <button id="who-Pauli" aria-pressed="false">Pauli</button>
+    </div>
+  </header>
+
+  <!-- Start: neue Session einrichten -->
+  <section id="view-start" class="view">
+    <div class="panel">
+      <h1 class="ptitle">Worauf habt ihr heute Lust?</h1>
+      <div class="rating-ctl">
+        <label for="min-rating">IMDb mindestens <output id="min-out">7,0</output></label>
+        <input id="min-rating" type="range" min="5" max="9" step="0.5" value="7">
+      </div>
+      <div class="glabel">Genres <span id="genre-hint">alle</span></div>
+      <div class="gchips" id="genre-chips"></div>
+      <div class="pool" id="pool"></div>
+      <button class="btn big-btn" id="btn-start">15 Filme ziehen</button>
+    </div>
+    <div class="past" id="past"></div>
+  </section>
+
+  <!-- Swipen -->
+  <section id="view-swipe" class="view" hidden>
+    <div class="sbar">
+      <button class="linkbtn" id="btn-back">← Sessions</button>
+      <div class="progress"><span id="prog-text">1 / 15</span><div class="ptrack"><div id="prog-bar"></div></div></div>
+    </div>
+    <div class="ssum" id="ssum"></div>
+    <div class="stage" id="stage"></div>
+    <div class="actions">
+      <button class="act undo" id="btn-undo" aria-label="Letzten Swipe zurücknehmen" title="Zurück">↺</button>
+      <button class="act no" id="btn-no" aria-label="Nein">✕</button>
+      <button class="act yes" id="btn-yes" aria-label="Ja, will ich sehen">♥</button>
+    </div>
+    <button class="sendbar" id="btn-invite"><span class="o-name">Pauli</span> zu dieser Session einladen</button>
+  </section>
+
+  <!-- Ergebnis einer Session -->
+  <section id="view-result" class="view" hidden>
+    <div class="sbar"><button class="linkbtn" id="btn-back2">← Sessions</button></div>
+    <div class="panel">
+      <h1 class="ptitle" id="res-title">Session fertig</h1>
+      <p class="ptext" id="res-text"></p>
+      <button class="btn" id="btn-send">Meine Swipes an <span class="o-name">Pauli</span> schicken</button>
+      <button class="btn ghost" id="btn-continue" hidden>Weiter swipen</button>
+    </div>
+    <div class="matches" id="match-list"></div>
+    <button class="btn ghost" id="btn-new">Neue Session starten</button>
+  </section>
+</div>
+
+<div class="overlay" id="pick-overlay" hidden>
+  <div class="sheet">
+    <h3>Wer swipt?</h3>
+    <p>Jede Person swipt auf dem eigenen Handy. Eine Session hat 15 Filme. Ihr schickt euch die Session per Link, und alles, was ihr beide mögt, wird ein Match.</p>
+    <div class="pick">
+      <button class="btn" id="pick-Tim">Ich bin Tim</button>
+      <button class="btn" id="pick-Pauli">Ich bin Pauli</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="match-overlay" hidden>
+  <div class="sheet">
+    <h3 id="match-head">Match!</h3>
+    <p id="match-lead">Ihr wollt beide sehen:</p>
+    <div class="big" id="match-title"></div>
+    <p id="match-sub"></p>
+    <div class="pick one">
+      <button class="btn" id="match-close">Weiter</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="share-overlay" hidden>
+  <div class="sheet">
+    <h3>Dein Link</h3>
+    <p>Kopier den Link und schick ihn <span class="o-name">Pauli</span>.</p>
+    <textarea id="share-text" rows="4" readonly></textarea>
+    <div class="pick">
+      <button class="btn ghost" id="share-close">Fertig</button>
+      <button class="btn" id="share-copy">Kopieren</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
